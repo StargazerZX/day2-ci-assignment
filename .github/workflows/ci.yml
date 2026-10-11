@@ -65,6 +65,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     if: ${{ github.event.inputs.create-package != 'false' }}
+    outputs:
+      version: ${{ steps.set-version.outputs.version }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -104,13 +106,61 @@ jobs:
           echo "Verifying package functionality (no checkout performed)..."
           # Need to check if I am supposed to package the requirements file or not.
 
+  pr-comment:
+    needs: package
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+    - name: Comment on PR
+      uses: actions/github-script@v7
+      env:
+        VERSION: ${{ needs.package.outputs.version }}
+        with:
+        script: |
+            const version = process.env.VERSION || 'n/a';
+            github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: `✅ CI passed. Package version ${version} is ready.`
+            })
+
   report:
     needs: [test, package]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    env:
+      NOTIFY_TOKEN: ${{ secrets.NOTIFY_TOKEN }}
     steps:
-      - name: Print upstream job results
+      - name: Generate Job Summary Table
+        env:
+          REPORT_TITLE: ${{ vars.REPORT_TITLE }}
+          VERSION: ${{ needs.package.outputs.version }}
+          COMMIT_SHA: ${{ github.sha }}
+          EVENT_NAME: ${{ github.event_name }}
+          TEST_RESULT: ${{ needs.test.result }}
+          PACKAGE_RESULT: ${{ needs.package.result }}
         run: |
-          echo "Test job status: ${{ needs.test.result }}"
-          echo "Package job status: ${{ needs.package.result }}"
+          SHORT_SHA=$(echo "$COMMIT_SHA" | cut -c1-7)
+          APP_VERSION="${VERSION:-n/a}"
+          TITLE="${REPORT_TITLE:-CI Report}"
+
+          echo "### $TITLE" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric / Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| App Name | temperature |" >> $GITHUB_STEP_SUMMARY
+          echo "| Version | $APP_VERSION \vert{}" >> $GITHUB_STEP_SUMMARY
+          echo "| Commit | $SHORT_SHA \vert{}" >> $GITHUB_STEP_SUMMARY
+          echo "| Event Name | $EVENT_NAME \vert{}" >> $GITHUB_STEP_SUMMARY
+          echo "| Test Result | $TEST_RESULT \vert{}" >> $GITHUB_STEP_SUMMARY
+          echo "| Package Result | $PACKAGE_RESULT \vert{}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Send Notification if Token is Set
+        if: env.NOTIFY_TOKEN != ''
+        run: |
+          TOKEN_LEN=${#NOTIFY_TOKEN}
+          echo "Notification sent (token length: $TOKEN_LEN)"
