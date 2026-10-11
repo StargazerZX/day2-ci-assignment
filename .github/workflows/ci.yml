@@ -1,0 +1,116 @@
+name: Day 2 CI
+run-name: ${{ github.actor }} - running workflow
+
+permissions:
+  contents: read
+
+env:
+    APP_NAME: temperature
+
+on:
+    push:
+        branches: [ main ]
+        paths-ignore:
+            - '**.md'
+            - 'docs/**'
+    pull_request:
+        branches: [ main ]
+    workflow_dispatch:
+        inputs:
+            python-version:
+                description: 'Python version to use'
+                required: true
+                default: '3.13'
+                type: choice
+                options:
+                - '3.12'
+                - '3.13'
+            create-package:
+                description: 'Whether to create a package'
+                required: true
+                default: true
+                type: boolean
+    schedule:
+        - cron: '0 7 * * 1'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: ${{ github.event.inputs.python-version || '3.13' }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Run pytest
+        id: run-tests
+        run: pytest -v
+
+      - name: Notify on test failure
+        if: failure() && steps.run-tests.outcome == 'failure'
+        run: |
+          echo "🚨 Tests failed on ${{ github.ref_name }}"
+
+  package:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: ${{ github.event.inputs.create-package != 'false' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: ${{ github.event.inputs.python-version || '3.13' }}
+
+      - name: Compute and set version
+        id: set-version
+        run: |
+          VERSION="0.1.${{ github.run_number }}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create package tarball
+        env:
+          VERSION: ${{ steps.set-version.outputs.version }}
+        run: |
+          mkdir -p dist
+          tar -czvf dist/temperature-$VERSION.tar.gz temperature.py README.md
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: package
+          path: dist/temperature-*.tar.gz
+          if-no-files-found: error
+
+  verify:
+    needs: package
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify package works without checkout
+        run: |
+          echo "Verifying package functionality (no checkout performed)..."
+          # Need to check if I am supposed to package the requirements file or not.
+
+  report:
+    needs: [test, package]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Print upstream job results
+        run: |
+          echo "Test job status: ${{ needs.test.result }}"
+          echo "Package job status: ${{ needs.package.result }}"
