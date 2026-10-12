@@ -83,7 +83,7 @@ runs:
       shell: bash
       run: |
         echo "Running TruffleHog scan on $SCAN_TARGET..."
-        trufflehog git "$SCAN_TARGET" --json > trufflehog-report.json
+        trufflehog git "file://$SCAN_TARGET" --json > trufflehog-report.json
     
     - name: Run Trivy Scan (Vulnerabilities and Misconfigurations)
       shell: bash
