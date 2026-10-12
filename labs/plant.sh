@@ -18,7 +18,7 @@ SEEDS=(labs/[0-9][0-9]-*/)
 DIRS=(labs/"${ID}"-*/)
 [[ ${#DIRS[@]} -eq 1 ]] || die "No lab seed ${ID}."
 DIR="${DIRS[0]%/}"; NAME="${DIR#labs/}"
-TITLE="$(head -1 "$DIR/README.md" | sed -E 's/^#+ *//')"
+TITLE="$(head -1 "$DIR/README.md" | sed -E 's/^#+ *//; s/^[0-9]+ · //')"
 require_clean_tree
 BASE="$(git rev-parse --abbrev-ref HEAD)"
 [[ "$BASE" == lab/* ]] && die "You are on a lab branch already. Run labs/reset.sh first."
