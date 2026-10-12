@@ -5,7 +5,7 @@ bind = "0.0.0.0:5000"
 workers = 1
 threads = 4
 accesslog = "-"          # access log to stdout => visible in docker logs / CI logs
-worker_tmp_dir = "/dev/shm"  # noqa: S108 -- worker heartbeat file in RAM: works with a read-only root filesystem
+worker_tmp_dir = "/dev/shm"  #nosonar # noqa: S108 -- worker heartbeat file in RAM: works with a read-only root filesystem
 # gunicorn 24+ opens a control socket under $HOME/.gunicorn by default. We never use it, and a
 # non-root UID with no home directory cannot create it, so switch it off.
 control_socket_disable = True
