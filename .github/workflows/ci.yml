@@ -167,14 +167,14 @@ jobs:
           echo "### $TITLE" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Metric / Property | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| --- | --- |" >> $GITHUB_STEP_SUMMARY
           echo "| App Name | temperature |" >> $GITHUB_STEP_SUMMARY
-          echo "| Version | $APP_VERSION \vert{}" >> $GITHUB_STEP_SUMMARY
-          echo "| Commit | $SHORT_SHA \vert{}" >> $GITHUB_STEP_SUMMARY
-          echo "| Event Name | $EVENT_NAME \vert{}" >> $GITHUB_STEP_SUMMARY
-          echo "| Test Result | $TEST_RESULT \vert{}" >> $GITHUB_STEP_SUMMARY
-          echo "| Package Result | $PACKAGE_RESULT \vert{}" >> $GITHUB_STEP_SUMMARY
-
+          echo "| Version | $APP_VERSION |" >> $GITHUB_STEP_SUMMARY
+          echo "| Commit | $SHORT_SHA |" >> $GITHUB_STEP_SUMMARY
+          echo "| Event Name | $EVENT_NAME |" >> $GITHUB_STEP_SUMMARY
+          echo "| Test Result | $TEST_RESULT |" >> $GITHUB_STEP_SUMMARY
+          echo "| Package Result | $PACKAGE_RESULT |" >> $GITHUB_STEP_SUMMARY
+          
       - name: Send Notification if Token is Set
         if: env.NOTIFY_TOKEN != ''
         run: |
