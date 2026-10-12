@@ -29,8 +29,8 @@
   <div id="banner" role="alert"></div>
 
   <section class="card" id="card-vote">
-    <h2>1 · Vote <span class="muted">(frontend → api → store)</span></h2>
-    <p class="hint" id="vote-hint">Waiting for the API…</p>
+    <h2>1 · Vote <span class="muted">(frontend → api)</span></h2>
+    <p class="hint" id="vote-hint">Votes live in the API's memory: restart the api container and they're gone.</p>
     <div id="options"></div>
     <p class="vote-footer"><button class="ghost" id="reset-btn" type="button">reset votes</button>
        <span class="muted" id="total"></span> <span class="vote-status" id="vote-status"></span></p>
@@ -46,41 +46,14 @@
       <dt>api version</dt><dd id="api-ver">…</dd>
       <dt>api node</dt><dd id="api-node">…</dd>
       <dt>api <span id="api-env-label">env</span></dt><dd id="api-ns">…</dd>
-      <dt class="task-row" hidden>task definition</dt><dd class="task-row" id="api-task" hidden>…</dd>
     </dl>
     <div class="muted seen-title">Responses per API <span class="instance-word">instance</span> since page load
        <button class="ghost small" id="clear-btn" type="button">clear</button></div>
     <div id="seen"></div>
   </section>
 
-  <section class="card wide" id="card-nodes">
-    <h2>3 · <span id="nodes-title">Nodes</span></h2>
-    <p class="hint" id="nodes-hint"></p>
-    <div id="nodes"></div>
-  </section>
-
-  <section class="card" id="card-storage">
-    <h2>4 · Where do my votes live? <span class="muted" id="storage-sub"></span></h2>
-    <p class="hint" id="storage-hint">Waiting for the API…</p>
-    <dl>
-      <dt>store</dt><dd id="store-kind">…</dd>
-      <dt>db host</dt><dd id="store-host">…</dd>
-      <dt>answered by</dt><dd id="store-server">…</dd>
-      <dt>store status</dt><dd id="store-status"><span class="dot"></span><span id="store-status-text">…</span></dd>
-    </dl>
-  </section>
-
-  <!-- Kubernetes only: hidden on ECS and Docker, where there is no ServiceAccount. -->
-  <section class="card" id="card-rbac" hidden>
-    <h2>5 · What can the API see? <span class="muted">(RBAC)</span></h2>
-    <p class="hint">The API asks Kubernetes to list pods, using its OWN ServiceAccount identity — not yours.</p>
-    <div>identity: <code id="rbac-identity">…</code></div>
-    <div id="rbac-badge" class="rbac-badge">…</div>
-    <div id="rbac-body"></div>
-  </section>
-
   <section class="card" id="card-build">
-    <h2>6 · What's running? <span class="muted">(build provenance)</span>
+    <h2>3 · What's running? <span class="muted">(build provenance)</span>
       <span id="mixed" class="chip chip-warn" hidden>mixed release</span></h2>
     <p class="hint">Stamped into each image by the pipeline that built it. A different commit on each tier = a mixed release.</p>
     <table class="build-table">
@@ -95,7 +68,7 @@
 
   <!-- Shown only when the pipeline passed a security summary to the API (RELEASE_SECURITY_SUMMARY). -->
   <section class="card" id="card-security" hidden>
-    <h2>7 · Release security <span class="muted">(what the pipeline found)</span></h2>
+    <h2>4 · Release security <span class="muted">(what the pipeline found)</span></h2>
     <p class="hint" id="security-hint"></p>
     <div id="security-badge" class="rbac-badge">…</div>
     <div id="security-body"></div>

@@ -26,12 +26,9 @@ test("PodPoll renders, reports its build, and counts a vote", async ({ page, req
   const major = (/^v?(\d+)/.exec(build.version) || [])[1] || "";
   await expect(page.locator("body")).toHaveAttribute("data-major", String(Number(major) || major));
 
-  // Card 6 shows both tiers' builds.
+  // "What's running?" shows both tiers' builds.
   await expect(page.locator("#build-fe td").first()).toHaveText(build.version);
   await expect(page.locator("#build-api td").first()).toHaveText(info.version);
-
-  // Card 5 (RBAC) only on Kubernetes.
-  await expect(page.locator("#card-rbac")).toBeVisible({ visible: info.platform === "kubernetes" });
 
   // Vote and watch the total go up.
   const total = page.locator("#total");

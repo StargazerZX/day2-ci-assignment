@@ -35,7 +35,6 @@ check_once() {
   local info build fe_build fe_version
   get /healthz >/dev/null                                || { last_error="frontend /healthz not OK"; return 1; }
   info="$(get /api/info)"                                || { last_error="/api/info failed (is the API up and reachable from the frontend?)"; return 1; }
-  [[ "$(jq -r .db_ok <<<"$info")" == "true" ]]           || { last_error="API reports its vote store unreachable"; return 1; }
   if [[ -n "$ENV_NAME" ]]; then
     local env; env="$(jq -r '.env // .namespace' <<<"$info")"
     [[ "$env" == "$ENV_NAME" ]]                          || { last_error="API env is '$env', expected '$ENV_NAME'"; return 1; }
@@ -59,7 +58,7 @@ until check_once; do
   echo "  waiting: $last_error"
   sleep 5
 done
-echo "  ok: healthy, store reachable${ENV_NAME:+, env=$ENV_NAME}${VERSION:+, version=$VERSION}${SHA:+, both tiers at ${SHA:0:7}}"
+echo "  ok: frontend and API answer${ENV_NAME:+, env=$ENV_NAME}${VERSION:+, version=$VERSION}${SHA:+, both tiers at ${SHA:0:7}}"
 
 if (( VOTE )); then
   option="$(get /api/results | jq -r '.results[0].option')"

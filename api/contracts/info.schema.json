@@ -8,15 +8,10 @@
     "namespace",
     "node",
     "version",
-    "store",
-    "db_host",
-    "db_server",
-    "db_ok",
     "env",
     "platform",
     "git_sha",
     "ci_system",
-    "task",
     "reset_protected",
     "chaos"
   ],
@@ -33,21 +28,6 @@
     "version": {
       "type": "string"
     },
-    "store": {
-      "enum": [
-        "redis",
-        "postgres"
-      ]
-    },
-    "db_host": {
-      "type": "string"
-    },
-    "db_server": {
-      "type": "string"
-    },
-    "db_ok": {
-      "type": "boolean"
-    },
     "env": {
       "type": "string"
     },
@@ -63,12 +43,6 @@
     },
     "ci_system": {
       "type": "string"
-    },
-    "task": {
-      "type": [
-        "object",
-        "null"
-      ]
     },
     "reset_protected": {
       "type": "boolean"

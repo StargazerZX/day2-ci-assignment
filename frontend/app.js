@@ -49,14 +49,9 @@
     $("who-hint").textContent = h.whoHint;
     document.querySelectorAll(".instance-word").forEach((el) => { el.textContent = h.instance; });
     $("api-env-label").textContent = h.envLabel;
-    $("nodes-title").textContent = h.nodesTitle;
-    $("nodes-hint").textContent = h.nodesHint;
-    $("storage-sub").textContent = h.storageSub;
-    $("card-rbac").hidden = p !== "kubernetes";
-    document.querySelectorAll(".task-row").forEach((el) => { el.hidden = p !== "ecs"; });
   }
 
-  // ---- card 2: who answered? / card 1+4: which store? --------------------------------------
+  // ---- card 2: who answered? --------------------------------------------------------------
   async function pollInfo() {
     try {
       const d = await getJSON("/api/info");
@@ -68,7 +63,6 @@
       $("api-node").textContent = d.node;
       const env = d.env || d.namespace;
       $("api-ns").textContent = platform === "kubernetes" ? d.namespace : env;
-      if (d.task) $("api-task").textContent = `${d.task.family}:${d.task.revision}  (${d.task.cluster})`;
       const badge = $("env");
       badge.textContent = `${h.envLabel}: ${env}`;
       badge.classList.remove("env-unknown");
@@ -79,20 +73,6 @@
       resetProtected = Boolean(d.reset_protected);
       seen[d.pod] = (seen[d.pod] || 0) + 1;
       renderSeen();
-
-      const db = "<code>" + esc(d.db_server) + "</code>";
-      if (d.store === "postgres") {
-        $("vote-hint").innerHTML = h.votePostgres.replace("{db}", db);
-        $("storage-hint").textContent = h.storagePostgres;
-      } else {
-        $("vote-hint").innerHTML = h.voteRedis;
-        $("storage-hint").textContent = h.storageRedis;
-      }
-      $("store-kind").textContent = d.store;
-      $("store-host").textContent = d.db_host;
-      $("store-server").textContent = d.db_server;
-      $("store-status").querySelector(".dot").classList.toggle("bad", !d.db_ok);
-      $("store-status-text").textContent = d.db_ok ? "reachable" : "unreachable";
     } catch (e) {
       const h = L.hintsFor(platform);
       const cmds = h ? h.debug : L.UNKNOWN_PLATFORM_DEBUG;
@@ -147,64 +127,7 @@
     pollResults();
   }
 
-  // ---- card 3: nodes / host / tasks ------------------------------------------------------------
-  async function pollNodes() {
-    try {
-      const d = await getJSON("/api/nodes");
-      const h = L.hintsFor(platform) || L.HINTS.docker;
-      if (!d.nodes.length) {
-        $("nodes").innerHTML = `<div class="empty">${esc(h.nodesEmpty)}</div>`;
-        return;
-      }
-      const ecs = platform === "ecs";
-      const head = ecs
-        ? "<th>task</th><th>az</th><th>launch type</th>"
-        : "<th>node</th><th>agent " + esc(h.instance) + "</th>" + (h.showPodsOnNode ? "<th>pods on node</th>" : "");
-      $("nodes").innerHTML =
-        `<table><tr>${head}<th>load (1m)</th><th>mem used</th><th>kernel</th><th>last seen</th></tr>` +
-        d.nodes.map((n) => {
-          const first = ecs
-            ? `<td><span class="dot"></span><b>${esc(n.node)}</b></td><td>${esc(n.az ?? "?")}</td><td>${esc(n.launch_type ?? "?")}</td>`
-            : `<td><span class="dot"></span><b>${esc(n.node)}</b></td><td class="mono">${esc(n.agent_pod)}</td>` +
-              (h.showPodsOnNode ? `<td>${esc(n.pods_on_node ?? "?")}</td>` : "");
-          return `<tr>${first}<td>${esc(n.load1 ?? "?")}</td><td>${esc(n.mem_used_pct ?? "?")}%</td>` +
-                 `<td class="mono">${esc(n.kernel)}</td><td>${esc(n.age_seconds)} s ago</td></tr>`;
-        }).join("") + "</table>";
-    } catch (e) {
-      $("nodes").innerHTML = '<div class="empty">node list unavailable right now</div>';
-    }
-  }
-
-  // ---- card 5: RBAC (Kubernetes only) ---------------------------------------------------------
-  async function pollRbac() {
-    if (platform !== "kubernetes") return;
-    try {
-      const d = await getJSON("/api/cluster/pods");
-      $("rbac-identity").textContent = d.identity;
-      const badge = $("rbac-badge");
-      const body = $("rbac-body");
-      if (d.allowed) {
-        badge.textContent = "ALLOWED";
-        badge.className = "rbac-badge allowed";
-        body.innerHTML = d.pods.length
-          ? "<table><tr><th>pod</th><th>phase</th><th>ready</th><th>node</th></tr>" +
-            d.pods.map((p) => `<tr><td class="mono">${esc(p.name)}</td><td>${esc(p.phase)}</td>` +
-              `<td>${esc(p.ready)}</td><td>${esc(p.node)}</td></tr>`).join("") + "</table>"
-          : '<div class="empty">allowed, but no matching pods found</div>';
-      } else {
-        badge.textContent = d.status ? `FORBIDDEN (${d.status})` : "UNAVAILABLE";
-        badge.className = "rbac-badge forbidden";
-        body.innerHTML = '<div class="rbac-msg">' + esc(d.message) + "</div>" +
-          '<div class="rbac-hint">That is RBAC saying no. Give the API its own ServiceAccount, a Role, and a RoleBinding.</div>';
-      }
-    } catch (e) {
-      $("rbac-badge").textContent = "UNAVAILABLE";
-      $("rbac-badge").className = "rbac-badge forbidden";
-      $("rbac-body").innerHTML = '<div class="empty">RBAC status unavailable right now</div>';
-    }
-  }
-
-  // ---- card 6: what's running? ------------------------------------------------------------------
+  // ---- card 3: what's running? ------------------------------------------------------------------
   function buildCells(b) {
     if (!b) return ["…", "…", "…", "…", "…"];
     const sha = L.shortSha(b.git_sha);
@@ -236,7 +159,7 @@
     renderBuild();
   }
 
-  // ---- card 7: release security -----------------------------------------------------------------
+  // ---- card 4: release security -----------------------------------------------------------------
   const SEVERITIES = ["critical", "high", "medium", "low"];
 
   async function pollSecurity() {
@@ -273,12 +196,9 @@
 
   renderSeen();
   renderBuild();
-  pollInfo().then(() => { pollRbac(); pollNodes(); });
-  pollResults(); pollBuild(); pollSecurity();
+  pollInfo(); pollResults(); pollBuild(); pollSecurity();
   setInterval(pollInfo, 1500);
   setInterval(pollResults, 3000);
-  setInterval(pollNodes, 3000);
-  setInterval(pollRbac, 3000);
   setInterval(pollBuild, 3000);
   setInterval(pollSecurity, 10000);
 })();

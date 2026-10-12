@@ -1,111 +1,58 @@
-"""Endpoint tests in Redis mode (fakeredis). Shapes are checked against api/contracts/."""
+"""Endpoint tests. Shapes are checked against api/contracts/."""
 import json
+import threading
 
-import fakeredis
 import pytest
+
 from conftest import assert_contract
-
-
-def broken_redis():
-    server = fakeredis.FakeServer()
-    server.connected = False  # every command raises redis.ConnectionError
-    return fakeredis.FakeRedis(server=server, decode_responses=True)
 
 
 # --- health ------------------------------------------------------------------
 def test_healthz_is_always_ok(api):
-    mod, client = api
-    mod.r = broken_redis()  # liveness must NOT depend on the store
+    _, client = api
     res = client.get("/healthz")
     assert res.status_code == 200 and res.text == "ok\n"
 
 
-def test_readyz_follows_the_store(api):
-    mod, client = api
-    assert client.get("/readyz").status_code == 200
-    mod.r = broken_redis()
+def test_readyz_is_ready_by_default(api):
+    _, client = api
     res = client.get("/readyz")
-    assert res.status_code == 503 and "store unreachable" in res.text
+    assert res.status_code == 200 and res.text == "ready\n"
 
 
 # --- info --------------------------------------------------------------------
-def test_info_keeps_original_fields_and_adds_new_ones(load_app):
+def test_info(load_app):
     mod = load_app(POD_NAME="api-1", POD_NAMESPACE="dev", NODE_NAME="node-a", APP_VERSION="2.0",
                    GIT_SHA="0123456789abcdef0123456789abcdef01234567", CI_SYSTEM="github-actions")
     d = mod.app.test_client().get("/api/info").get_json()
     assert_contract("info", d)
     assert d["pod"] == "api-1" and d["namespace"] == "dev" and d["node"] == "node-a"
-    assert d["version"] == "2.0" and d["store"] == "redis" and d["db_host"] == "redis"
-    assert d["db_server"] == "api-1" and d["db_ok"] is True    # the Redis-mode quirk is preserved
-    assert d["env"] == "dev"                                   # falls back to POD_NAMESPACE
+    assert d["version"] == "2.0" and d["env"] == "dev"           # env falls back to the namespace
     assert d["git_sha"].startswith("0123456") and d["ci_system"] == "github-actions"
-    assert d["platform"] == "docker" and d["task"] is None and d["reset_protected"] is False
+    assert d["platform"] == "docker" and d["reset_protected"] is False
     assert d["chaos"] == {"ready_fail": False, "start_delay_seconds": 0, "error_rate": 0}
 
 
 def test_podpoll_env_wins_over_namespace(load_app):
-    mod = load_app(POD_NAMESPACE="team-a", PODPOLL_ENV="staging")
-    d = mod.app.test_client().get("/api/info").get_json()
+    d = load_app(POD_NAMESPACE="team-a", PODPOLL_ENV="staging").app.test_client().get("/api/info").get_json()
     assert d["env"] == "staging" and d["namespace"] == "team-a"
 
 
-def test_info_defaults_outside_kubernetes(load_app):
+def test_info_defaults(load_app):
     d = load_app().app.test_client().get("/api/info").get_json()
     assert d["namespace"] == "unknown" and d["env"] == "unknown" and d["node"] == "unknown"
-    assert d["version"] == "dev"
+    assert d["version"] == "dev" and d["pod"]                     # pod = container hostname
 
 
-# --- platform detection ------------------------------------------------------
 @pytest.mark.parametrize("env,expected", [
     ({}, "docker"),
     ({"KUBERNETES_SERVICE_HOST": "10.96.0.1"}, "kubernetes"),
     ({"ECS_CONTAINER_METADATA_URI_V4": "http://169.254.170.2/v4/abc"}, "ecs"),
     ({"PLATFORM": "ECS", "KUBERNETES_SERVICE_HOST": "10.96.0.1"}, "ecs"),   # explicit wins
     ({"PLATFORM": "bogus"}, "docker"),                                       # invalid -> auto
-    ({"PLATFORM": ""}, "docker"),
 ])
 def test_detect_platform(load_app, env, expected):
     assert load_app().detect_platform(env) == expected
-
-
-ECS_TASK = {
-    "Cluster": "arn:aws:ecs:eu-central-1:111122223333:cluster/podpoll",
-    "TaskARN": "arn:aws:ecs:eu-central-1:111122223333:task/podpoll/0f1e2d3c4b5a69788796a5b4c3d2e1f0",
-    "Family": "podpoll-dev-api", "Revision": "7",
-    "AvailabilityZone": "eu-central-1b", "LaunchType": "FARGATE",
-}
-
-
-def test_ecs_identity_comes_from_task_metadata(load_app, json_server):
-    base = json_server({"/v4/abc/task": ECS_TASK}) + "/v4/abc"
-    mod = load_app(ECS_CONTAINER_METADATA_URI_V4=base, PODPOLL_ENV="dev")
-    d = mod.app.test_client().get("/api/info").get_json()
-    assert_contract("info", d)
-    assert d["platform"] == "ecs"
-    assert d["pod"] == "0f1e2d3c4b5a69788796a5b4c3d2e1f0"
-    assert d["node"] == "eu-central-1b / FARGATE"
-    assert d["task"] == {"task_id": "0f1e2d3c4b5a69788796a5b4c3d2e1f0", "cluster": "podpoll",
-                         "family": "podpoll-dev-api", "revision": "7",
-                         "az": "eu-central-1b", "launch_type": "FARGATE"}
-
-
-def test_ecs_explicit_names_still_win(load_app, json_server):
-    base = json_server({"/v4/abc/task": ECS_TASK}) + "/v4/abc"
-    mod = load_app(ECS_CONTAINER_METADATA_URI_V4=base, POD_NAME="me", NODE_NAME="here")
-    assert (mod.POD_NAME, mod.NODE_NAME) == ("me", "here")
-
-
-def test_unreachable_ecs_metadata_never_crashes(load_app):
-    mod = load_app(ECS_CONTAINER_METADATA_URI_V4="http://127.0.0.1:9/v4/none")
-    assert mod.PLATFORM == "ecs" and mod.ECS_TASK == {}
-    assert mod.NODE_NAME == "unknown"
-    assert mod.app.test_client().get("/healthz").status_code == 200
-
-
-def test_ecs_metadata_ignored_off_ecs(load_app, json_server):
-    base = json_server({"/v4/abc/task": ECS_TASK}) + "/v4/abc"
-    mod = load_app(ECS_CONTAINER_METADATA_URI_V4=base, PLATFORM="docker")
-    assert mod.ECS_TASK == {}
 
 
 # --- build provenance --------------------------------------------------------
@@ -121,18 +68,18 @@ def test_build_defaults(api):
 def test_build_from_ci(load_app):
     sha = "abcdef0123456789abcdef0123456789abcdef01"
     mod = load_app(APP_VERSION="1.4.0", GIT_SHA=sha.upper(), GIT_REF="refs/heads/main", BUILD_ID="42",
-                   BUILD_URL="https://github.com/u/podpoll-cicd/actions/runs/42", CI_SYSTEM="github-actions",
-                   BUILD_TIME="2026-10-11T09:30:00Z", SOURCE_URL="https://github.com/u/podpoll-cicd")
+                   BUILD_URL="https://github.com/u/podpoll/actions/runs/42", CI_SYSTEM="github-actions",
+                   BUILD_TIME="2026-10-11T09:30:00Z", SOURCE_URL="https://github.com/u/podpoll")
     d = mod.app.test_client().get("/api/build").get_json()
     assert_contract("build", d)
     assert d["git_sha"] == sha and d["git_sha_short"] == "abcdef0"
-    assert d["commit_url"] == f"https://github.com/u/podpoll-cicd/commit/{sha}"
+    assert d["commit_url"] == f"https://github.com/u/podpoll/commit/{sha}"
     assert d["build_time"] == "2026-10-11T09:30:00Z" and d["build_id"] == "42"
 
 
 @pytest.mark.parametrize("raw,expected", [
     ("2.3.1-abc123", "2.3.1-abc123"),
-    ("feature/login", "feature-login"),          # a branch name with "/" used to break sed
+    ("feature/login", "feature-login"),          # a branch name with "/" would break sed in the frontend build
     ("1.0 ; rm -rf /", "1.0---rm--rf--"),
     ("v1.2.3+build.7", "v1.2.3+build.7"),
     ("", "dev"),
@@ -170,6 +117,17 @@ def test_vote_and_count(api):
     d = client.get("/api/results").get_json()
     counts = {x["option"]: x["votes"] for x in d["results"]}
     assert counts["SAST"] == 3 and counts["Image scan"] == 1 and d["total"] == 4
+
+
+def test_concurrent_votes_are_all_counted(api):
+    """gunicorn runs several threads in one process: no vote may be lost."""
+    mod, _ = api
+    threads = [threading.Thread(target=lambda: [mod.store.add("SAST") for _ in range(500)]) for _ in range(8)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert mod.store.counts()["SAST"] == 4000
 
 
 @pytest.mark.parametrize("body", [{"option": "Pod"}, {}, None, {"option": 1}])
@@ -220,49 +178,6 @@ def test_reset_token(load_app):
     assert res.status_code == 200 and client.get("/api/results").get_json()["total"] == 0
 
 
-# --- store failures ----------------------------------------------------------
-@pytest.mark.parametrize("method,path,body", [
-    ("get", "/api/results", None),
-    ("post", "/api/vote", {"option": "SAST"}),
-    ("post", "/api/reset", None),
-    ("post", "/api/nodes/heartbeat", {"node": "n1"}),
-    ("get", "/api/nodes", None),
-])
-def test_redis_down_gives_503(api, method, path, body):
-    mod, client = api
-    mod.r = broken_redis()
-    res = getattr(client, method)(path, json=body)
-    assert res.status_code == 503
-    assert res.get_json()["error"] == "database unavailable"
-
-
-# --- nodes -------------------------------------------------------------------
-def test_heartbeat_requires_node(api):
-    _, client = api
-    res = client.post("/api/nodes/heartbeat", json={"kernel": "6.x"})
-    assert res.status_code == 400
-
-
-def test_heartbeats_listed_with_age_and_ttl(load_app):
-    mod = load_app(NODE_TTL_SECONDS="45")
-    client = mod.app.test_client()
-    for n in ("node-b", "node-a"):
-        res = client.post("/api/nodes/heartbeat", json={"node": n, "agent_pod": f"agent-{n}"})
-        assert res.get_json() == {"ok": True}
-    d = client.get("/api/nodes").get_json()
-    assert_contract("nodes", d)
-    assert [x["node"] for x in d["nodes"]] == ["node-a", "node-b"]
-    assert all(x["age_seconds"] == 0 for x in d["nodes"])
-    assert 0 < mod.r.ttl("node:node-a") <= 45
-
-
-def test_heartbeat_expiring_between_scan_and_get(api, monkeypatch):
-    mod, client = api
-    client.post("/api/nodes/heartbeat", json={"node": "gone"})
-    monkeypatch.setattr(mod.r, "get", lambda key: None)
-    assert client.get("/api/nodes").get_json() == {"nodes": []}
-
-
 # --- chaos -------------------------------------------------------------------
 def test_chaos_ready_fail(load_app):
     client = load_app(CHAOS_READY_FAIL="true").app.test_client()
@@ -306,11 +221,6 @@ def test_no_start_delay_by_default(load_app, monkeypatch):
     mod = load_app()
     monkeypatch.setattr(mod.time, "sleep", lambda s: pytest.fail("should not sleep"))
     mod.startup_delay()
-
-
-def test_all_chaos_flags_leave_healthz_alone(load_app):
-    client = load_app(CHAOS_READY_FAIL="1", CHAOS_ERROR_RATE="1").app.test_client()
-    assert client.get("/healthz").status_code == 200
 
 
 # --- release security --------------------------------------------------------

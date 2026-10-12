@@ -78,7 +78,6 @@ test("every platform defines every hint key", () => {
 
 test("Kubernetes-only wording stays on Kubernetes", () => {
   assert.equal(L.hintsFor("kubernetes").envLabel, "namespace");
-  assert.equal(L.hintsFor("ecs").nodesTitle, "Tasks (each task is its own micro-VM)");
-  assert.equal(L.hintsFor("docker").nodesTitle, "Host");
+  assert.equal(L.hintsFor("docker").instance, "container");
   for (const p of ["ecs", "docker"]) assert.ok(!L.hintsFor(p).debug.join(" ").includes("kubectl"));
 });

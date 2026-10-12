@@ -85,7 +85,7 @@ jobs:
           node-version: '24'
           package-manager-cache: false
 
-      # API (incl. Postgres integration tests in a container), node-agent, scripts, frontend logic
+      # API, scripts (security-report.py) and frontend logic
       - name: Run all test suites with a JUnit report
         id: run-tests
         env:
@@ -122,7 +122,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        component: [api, frontend, node-agent]
+        component: [api, frontend]
     outputs:
       version: ${{ steps.meta.outputs.version }}
       image-tag: ${{ steps.meta.outputs.image-tag }}
@@ -222,7 +222,7 @@ jobs:
           docker compose -p podpoll-ci -f local/compose.yaml -f local/compose.registry.yaml \
             --env-file local/env/dev.env up -d --wait --wait-timeout 120
 
-      - name: Smoke test (right commit on both tiers, store reachable, a vote counts)
+      - name: Smoke test (right commit on both tiers, a vote counts)
         run: scripts/smoke-test.sh http://localhost:8081 --expect-sha "$GIT_SHA" --expect-env dev --timeout 60
 
       - name: Container logs
@@ -282,7 +282,7 @@ jobs:
           [[ -f .gitleaksignore ]] && args+=(--gitleaks-ignore .gitleaksignore)
           [[ -f $d/trufflehog-report.json ]] && args+=(--trufflehog "$d/trufflehog-report.json")
           [[ -f $d/trivy-report-prescan.json ]] && args+=(--trivy "fs=$d/trivy-report-prescan.json")
-          for c in api frontend node-agent; do
+          for c in api frontend; do
             f="scan-reports/postscan-${c}/trivy-report-postscan.json"
             [[ -f "$f" ]] && args+=(--trivy "image-${c}=${f}")
           done

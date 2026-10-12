@@ -4,8 +4,7 @@
 #     docker compose -p podpoll-ci -f local/compose.yaml -f local/compose.registry.yaml \
 #       --env-file local/env/dev.env up -d
 #
-# (Jenkins track: IMAGE_REGISTRY=localhost:5001.) Card 6 then shows the pipeline's commit,
-# run number and CI system -- proof that you are running exactly what CI produced.
+# The "What's running?" card then shows the pipeline's commit, run number and CI system.
 services:
   api:
     build: !reset null
@@ -14,8 +13,4 @@ services:
   frontend:
     build: !reset null
     image: ${IMAGE_REGISTRY:?set IMAGE_REGISTRY}/podpoll-frontend:${IMAGE_TAG:?set IMAGE_TAG}
-    pull_policy: always
-  node-agent:
-    build: !reset null
-    image: ${IMAGE_REGISTRY:?set IMAGE_REGISTRY}/podpoll-node-agent:${IMAGE_TAG:?set IMAGE_TAG}
     pull_policy: always

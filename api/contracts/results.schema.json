@@ -7,7 +7,6 @@
     "results",
     "total",
     "served_by",
-    "store",
     "question"
   ],
   "properties": {
@@ -38,12 +37,6 @@
     },
     "served_by": {
       "type": "string"
-    },
-    "store": {
-      "enum": [
-        "redis",
-        "postgres"
-      ]
     },
     "question": {
       "type": "string"
