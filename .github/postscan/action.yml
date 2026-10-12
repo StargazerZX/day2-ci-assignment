@@ -1,14 +1,33 @@
 name: Security Scanning Post-Checks
-description: This action runs security scanning post-checks on the codebase.
+description: >
+  Runs Trivy against a built container image, uploads the JSON report and, if asked, fails on
+  blocking findings (fixable vulnerabilities, secrets or misconfigurations at trivy-severity).
 
 inputs:
   image-tag:
-    description: 'Image tag to scan.'
+    description: 'Image to scan: a local image (e.g. built with load: true) or a registry reference.'
+    required: true
+  fail-on-findings:
+    description: "'true' fails the step on blocking findings. Default 'false': report only."
     required: false
+    default: 'false'
+  trivy-severity:
+    description: 'Trivy severities that count as blocking.'
+    required: false
+    default: 'CRITICAL,HIGH'
+  artifact-name:
+    description: >
+      Name of the uploaded report artifact. Must be unique within a workflow run, so set it when
+      scanning several images (e.g. postscan-api, postscan-frontend).
+    required: false
+    default: 'postscan-reports'
 outputs:
   trivy-report:
     description: 'Path to the generated Trivy JSON report'
     value: trivy-report-postscan.json
+  blocking-findings:
+    description: 'Number of blocking findings in the image'
+    value: ${{ steps.scan.outputs.blocking-findings }}
 
 runs:
   using: "composite"
@@ -40,16 +59,35 @@ runs:
 
         echo "Verifying installations..."
         "$BIN/trivy" --version
-    
-    - name: Run Trivy Scan (Vulnerabilities and Misconfigurations)
+
+    # The image reference arrives as an environment variable, never pasted into the script.
+    - name: Run Trivy Scan (vulnerabilities, secrets, misconfigurations)
+      id: scan
       shell: bash
-      run: |
-        echo "Running Trivy scan on $SCAN_TARGET..."
-        trivy image --scanners vuln,config,secret --format json --output trivy-report-postscan.json "${{ inputs.image-tag }}"
-    
+      env:
+        IMAGE: ${{ inputs.image-tag }}
+        TRIVY_SEVERITY: ${{ inputs.trivy-severity }}
+        FAIL_ON_FINDINGS: 'false'   # the gate step below decides, after the report is uploaded
+        REPORT_DIR: .
+      run: '"$GITHUB_ACTION_PATH/scan-image.sh"'
+
     - name: Upload Scan Reports
+      if: ${{ !cancelled() }}
       uses: actions/upload-artifact@v7
       with:
-        name: security-scan-reports
-        path: |
-          trivy-report-postscan.json
+        name: ${{ inputs.artifact-name }}
+        path: trivy-report-postscan.json
+        if-no-files-found: warn
+
+    - name: Security gate
+      if: ${{ inputs.fail-on-findings == 'true' }}
+      shell: bash
+      env:
+        BLOCKING: ${{ steps.scan.outputs.blocking-findings }}
+        IMAGE: ${{ inputs.image-tag }}
+      run: |
+        if [[ "${BLOCKING:-0}" != "0" ]]; then
+          echo "::error::${BLOCKING} blocking finding(s) in ${IMAGE}. See the job summary and the report artifact."
+          exit 1
+        fi
+        echo "No blocking findings in ${IMAGE}."
