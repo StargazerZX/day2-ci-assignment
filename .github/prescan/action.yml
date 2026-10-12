@@ -100,7 +100,7 @@ runs:
       uses: SonarSource/sonarqube-scan-action@v6
       env:
        # GITHUB_TOKEN: ${{ inputs.secrets.GITHUB_TOKEN }}
-        SONAR_TOKEN: ${{ inputs.secrets.sonar_token }}
+        SONAR_TOKEN: ${{ inputs.sonar_token }}
 
     - name: Upload Scan Reports
       if: ${{ !cancelled() }}
