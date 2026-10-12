@@ -1,0 +1,16 @@
+diff --git a/api/app.py b/api/app.py
+index b81660c..5059457 100644
+--- a/api/app.py
++++ b/api/app.py
+@@ -405,9 +405,8 @@ def vote():
+             with pg_connect() as conn:
+                 pg_ensure_schema(conn)
+                 with conn.cursor() as cur:
+-                    cur.execute(
+-                        "INSERT INTO votes (option, api_pod) VALUES (%s, %s)", (option, POD_NAME)
+-                    )
++                    # "Simpler" than query parameters...
++                    cur.execute(f"INSERT INTO votes (option, api_pod) VALUES ('{option}', '{POD_NAME}')")
+         except psycopg.Error as e:
+             return unavailable(e)
+     else:

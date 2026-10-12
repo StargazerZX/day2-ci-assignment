@@ -1,0 +1,2 @@
+EXPECT_PRESCAN="gitleaks-findings"
+EXPECT_IMAGE=""

@@ -24,3 +24,4 @@ reports/
 *-report.json
 *-report-*.json
 build.env
+.labs-tools/

@@ -1,0 +1,22 @@
+diff --git a/api/Dockerfile b/api/Dockerfile
+index afa89ef..e3c8ba0 100644
+--- a/api/Dockerfile
++++ b/api/Dockerfile
+@@ -9,6 +9,8 @@ ENV PYTHONUNBUFFERED=1 \
+     PIP_DISABLE_PIP_VERSION_CHECK=1
+ 
+ WORKDIR /app
++# "Quick debugging tools" -- installed the convenient way.
++RUN apt-get update && apt-get install -y curl
+ # --require-hashes: every package (and every transitive one) must match a hash in the lock
+ # file, so a tampered or swapped upload on PyPI fails the build instead of shipping.
+ COPY requirements.txt .
+@@ -41,8 +43,6 @@ LABEL org.opencontainers.image.title="podpoll-api" \
+       org.opencontainers.image.source="${SOURCE_URL}" \
+       org.opencontainers.image.licenses="MIT"
+ 
+-# Non-root, by number (no passwd entry needed; Kubernetes runAsNonRoot can verify a numeric UID).
+-USER 10001:10001
+ EXPOSE 5000
+ 
+ # Liveness only (/healthz never checks Redis/Postgres). python:slim has no curl/wget.

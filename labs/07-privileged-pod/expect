@@ -1,0 +1,2 @@
+EXPECT_PRESCAN="trivy-blocking"
+EXPECT_IMAGE=""

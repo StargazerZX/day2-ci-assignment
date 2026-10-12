@@ -1,0 +1,30 @@
+diff --git a/deploy/k8s/base/api.yaml b/deploy/k8s/base/api.yaml
+index 9cc6093..acd5cb4 100644
+--- a/deploy/k8s/base/api.yaml
++++ b/deploy/k8s/base/api.yaml
+@@ -22,12 +22,7 @@ spec:
+     spec:
+       serviceAccountName: podpoll-api
+       automountServiceAccountToken: true      # the RBAC card needs the token
+-      securityContext:
+-        runAsNonRoot: true
+-        runAsUser: 10001
+-        runAsGroup: 10001
+-        seccompProfile:
+-          type: RuntimeDefault
++      hostNetwork: true          # "the API couldn't reach Redis, this fixed it"
+       containers:
+         - name: api
+           image: podpoll-api:unset-set-me-in-an-overlay
+@@ -71,10 +66,7 @@ spec:
+             initialDelaySeconds: 5
+             periodSeconds: 10
+           securityContext:
+-            allowPrivilegeEscalation: false
+-            readOnlyRootFilesystem: true       # gunicorn keeps its worker files in /dev/shm
+-            capabilities:
+-              drop: ["ALL"]
++            privileged: true                   # "permission denied" went away with this
+           resources:
+             requests:
+               cpu: 50m

@@ -1,0 +1,2 @@
+EXPECT_PRESCAN="gitleaks-findings trivy-blocking trufflehog-unverified"
+EXPECT_IMAGE=""
