@@ -40,6 +40,11 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
+      
+      - name: Prescan Security Checks
+        uses: ./.github/prescan
+        with:
+          scan-path: ${{ github.workspace }}
 
       - name: Set up Python
         uses: actions/setup-python@v7

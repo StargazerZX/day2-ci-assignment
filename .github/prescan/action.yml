@@ -1,0 +1,76 @@
+name: Security Scanning Pre-Checks
+description: This action runs security scanning pre-checks on the codebase.
+
+inputs:
+  scan-path:
+    description: 'Choose a specific path to scan. Defaults to the root of the repository.'
+    required: false
+outputs:
+  gitleaks-report:
+    description: 'Path to the generated Gitleaks JSON report'
+    value: gitleaks-report.json
+  trufflehog-report:
+    description: 'Path to the generated TruffleHog JSON report'
+    value: trufflehog-report.json
+  trivy-report:
+    description: 'Path to the generated Trivy JSON report'
+    value: trivy-report-prescan.json
+
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install Security Tools
+      shell: bash
+      run: |
+        echo "Installing Gitleaks..."
+        curl -sSfL https://raw.githubusercontent.com/gitleaks/gitleaks/main/scripts/install.sh | sh -s -- -b /usr/local/bin
+
+        echo "Installing Trivy..."
+        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+
+        echo "Installing TruffleHog..."
+        curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
+
+        echo "Verifying installations..."
+        gitleaks version
+        trivy --version
+        trufflehog --version
+
+    - name: Determine Scan Path
+      shell: bash
+      run: |
+        # Evaluate fallback and write to GITHUB_ENV
+        TARGET="${{ inputs.scan-path }}"
+        if [ -z "$TARGET" ]; then
+          TARGET="$GITHUB_WORKSPACE"
+        fi
+        echo "SCAN_TARGET=$TARGET" >> $GITHUB_ENV
+        echo "Resolved scan path to: $TARGET"
+
+    - name: Run Gitleaks Scan
+      shell: bash
+      run: |
+        echo "Running Gitleaks scan on $SCAN_TARGET..."
+        gitleaks git "$SCAN_TARGET" --report-format=json --report-path=gitleaks-report.json
+
+    - name: Run TruffleHog Scan
+      shell: bash
+      run: |
+        echo "Running TruffleHog scan on $SCAN_TARGET..."
+        trufflehog git "$SCAN_TARGET" --json > trufflehog-report.json
+    
+    - name: Run Trivy Scan (Vulnerabilities and Misconfigurations)
+      shell: bash
+      run: |
+        echo "Running Trivy scan on $SCAN_TARGET..."
+        trivy fs --format json --output trivy-report-prescan.json "$SCAN_TARGET"
+    
+    - name: Upload Scan Reports
+      uses: actions/upload-artifact@v7
+      with:
+        name: security-scan-reports
+        path: |
+          gitleaks-report.json
+          trufflehog-report.json
+          trivy-report-prescan.json
