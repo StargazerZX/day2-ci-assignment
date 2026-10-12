@@ -60,6 +60,7 @@ jobs:
         with:
           scan-path: ${{ github.workspace }}
           fail-on-findings: ${{ inputs.fail-on-findings != false && 'true' || 'false' }}
+          sonar_token: ${{ secrets.SONAR_TOKEN }}
 
   test:
     runs-on: ubuntu-latest

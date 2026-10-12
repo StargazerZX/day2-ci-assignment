@@ -17,6 +17,9 @@ inputs:
     description: 'Trivy severities that count as blocking.'
     required: false
     default: 'CRITICAL,HIGH'
+  sonar_token:
+    description: 'SonarQube Token'
+    required: true
   artifact-name:
     description: 'Name of the uploaded report artifact (must be unique within a workflow run).'
     required: false
@@ -92,6 +95,12 @@ runs:
         FAIL_ON_FINDINGS: 'false'   # the gate step below decides, after the reports are uploaded
         REPORT_DIR: .
       run: '"$GITHUB_ACTION_PATH/scan.sh"'
+
+    - name: SonarQube Scan
+      uses: SonarSource/sonarqube-scan-action@v6
+      env:
+       # GITHUB_TOKEN: ${{ inputs.secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ inputs.secrets.sonar_token }}
 
     - name: Upload Scan Reports
       if: ${{ !cancelled() }}
