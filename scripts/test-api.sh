@@ -12,9 +12,13 @@ cd "$(dirname "$0")/../api"
 PG=1
 if [[ "${1:-}" == "--no-pg" ]]; then PG=0; shift; fi
 
+# PYTHON picks the interpreter (CI sets it to the one actions/setup-python installed);
+# otherwise uv's Python 3.12, or python3.12.
 VENV=.venv
 if [[ ! -x "$VENV/bin/python" ]]; then
-  if command -v uv >/dev/null; then uv venv -q --python 3.12 "$VENV"; else python3.12 -m venv "$VENV"; fi
+  if [[ -n "${PYTHON:-}" ]]; then "$PYTHON" -m venv "$VENV"
+  elif command -v uv >/dev/null; then uv venv -q --python 3.12 "$VENV"
+  else python3.12 -m venv "$VENV"; fi
 fi
 if command -v uv >/dev/null; then
   uv pip install -q --python "$VENV/bin/python" --require-hashes -r requirements.txt -r requirements-dev.txt
