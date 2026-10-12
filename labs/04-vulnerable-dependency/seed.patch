@@ -1,18 +1,16 @@
 diff --git a/api/requirements.in b/api/requirements.in
-index f8c6797..dd18821 100644
+index f048eec..7ab160a 100644
 --- a/api/requirements.in
 +++ b/api/requirements.in
-@@ -1,6 +1,7 @@
+@@ -1,4 +1,5 @@
  # Direct runtime dependencies. Edit THIS file, then regenerate the hashed lock file:
  #   uv pip compile --universal --python-version 3.12 --generate-hashes requirements.in -o requirements.txt
 -flask
 +flask==3.0.3       # pinned while debugging a session issue -- "temporarily"
 +werkzeug==3.0.1
- redis
  gunicorn
- psycopg[binary]
 diff --git a/api/requirements.txt b/api/requirements.txt
-index aa9d82a..c4d67a0 100644
+index 00df9d9..e2bb225 100644
 --- a/api/requirements.txt
 +++ b/api/requirements.txt
 @@ -8,9 +8,9 @@ click==8.5.0 \
@@ -28,18 +26,13 @@ index aa9d82a..c4d67a0 100644
      # via -r requirements.in
  gunicorn==26.2.0 \
      --hash=sha256:62b864895d9ebff0b2f9867ba04fe811c93121596540830c9c916d0769668447 \
-@@ -177,7 +177,6 @@ markupsafe==3.0.4 \
+@@ -177,10 +177,11 @@ markupsafe==3.0.4 \
      --hash=sha256:fd9f8797427910198f95bced71ddfed61130d7e349213bfb8466c9c99e2c46a8 \
      --hash=sha256:fdb4ca07ab75ffadab4a8b135ad59cdbb3156b99310f3d565370da74a15d6bd3
      # via
 -    #   flask
      #   jinja2
      #   werkzeug
- psycopg==3.3.6 \
-@@ -264,7 +263,9 @@ tzdata==2026.5 ; sys_platform == 'win32' \
-     --hash=sha256:8cc73c0a0bfca7dbfa59235d60b2eff82231dee33f53d206db1acd9173cfc0a7 \
-     --hash=sha256:b683bd1b6659ddcd810ff02ad09ba821d4bf1065072805063eb35c49617905ac
-     # via psycopg
 -werkzeug==3.1.9 \
 -    --hash=sha256:55ca7c70a75689be937aa27f8ff4b018f06ff4838fc73045560bf0f5a1291060 \
 -    --hash=sha256:6392e50c78460ba618e5b21f08a71f59c99ce99cdc6cf6e3dd7e6ccca8754fab

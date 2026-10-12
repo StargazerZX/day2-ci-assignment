@@ -1,0 +1,28 @@
+diff --git a/api/app.py b/api/app.py
+index 967277f..a411ae6 100644
+--- a/api/app.py
++++ b/api/app.py
+@@ -16,6 +16,7 @@ import os
+ import random
+ import re
+ import socket
++import subprocess
+ import threading
+ import time
+ from collections import Counter
+@@ -283,6 +284,15 @@ def reset():
+     return jsonify(ok=True)
+ 
+ 
++# --- troubleshooting -----------------------------------------------------------
++@app.get("/api/diag/ping")
++def diag_ping():
++    """Can the API reach a host? Handy when debugging networking: /api/diag/ping?host=example.com"""
++    host = request.args.get("host", "localhost")
++    out = subprocess.run(f"ping -c 1 -W 1 {host}", shell=True, capture_output=True, text=True, timeout=5)
++    return jsonify(host=host, reachable=out.returncode == 0, output=(out.stdout + out.stderr)[-500:])
++
++
+ if __name__ == "__main__":  # local dev only; in the container we use gunicorn
+     startup_delay()
+     app.run(host="0.0.0.0", port=5000)  # noqa: S104
