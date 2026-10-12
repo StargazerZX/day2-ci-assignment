@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PodPoll</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%97%B3%EF%B8%8F%3C/text%3E%3C/svg%3E">
+<!-- No inline <script> or <style>: the Content-Security-Policy only allows files from this origin. -->
+<link rel="stylesheet" href="app.css">
+<script src="logic.js" defer></script>
+<script src="app.js" defer></script>
+</head>
+<!-- The __TOKENS__ are replaced at image build time by stamp.sh, so the page knows its own build
+     without asking anyone. data-major picks the theme before any JavaScript runs. -->
+<body data-version="__APP_VERSION__" data-major="__APP_MAJOR__" data-git-sha="__GIT_SHA__"
+      data-git-ref="__GIT_REF__" data-build-id="__BUILD_ID__" data-build-url="__BUILD_URL__"
+      data-ci-system="__CI_SYSTEM__" data-build-time="__BUILD_TIME__" data-source-url="__SOURCE_URL__">
+<header>
+  <h1>🗳️ PodPoll</h1>
+  <span id="env" class="badge env-unknown">env: ?</span>
+  <span class="badge ribbon ribbon-v2">FRONTEND v2 🎉</span>
+  <span class="badge ribbon ribbon-v3">FRONTEND v3 ✨</span>
+  <span id="platform" class="chip" hidden></span>
+  <span id="chaos" class="chip chip-warn" hidden></span>
+  <span id="question" class="muted"></span>
+</header>
+
+<main>
+  <div id="banner" role="alert"></div>
+
+  <section class="card" id="card-vote">
+    <h2>1 · Vote <span class="muted">(frontend → api → store)</span></h2>
+    <p class="hint" id="vote-hint">Waiting for the API…</p>
+    <div id="options"></div>
+    <p class="vote-footer"><button class="ghost" id="reset-btn" type="button">reset votes</button>
+       <span class="muted" id="total"></span> <span class="vote-status" id="vote-status"></span></p>
+  </section>
+
+  <section class="card" id="card-who">
+    <h2>2 · Who answered me? <span class="muted" id="who-sub"></span></h2>
+    <p class="hint" id="who-hint">Refreshes every 1.5 s.</p>
+    <dl>
+      <dt>frontend <span class="instance-word">instance</span></dt><dd id="fe-pod">…</dd>
+      <dt>frontend version</dt><dd id="fe-ver">…</dd>
+      <dt>api <span class="instance-word">instance</span> (last)</dt><dd id="api-pod">…</dd>
+      <dt>api version</dt><dd id="api-ver">…</dd>
+      <dt>api node</dt><dd id="api-node">…</dd>
+      <dt>api <span id="api-env-label">env</span></dt><dd id="api-ns">…</dd>
+      <dt class="task-row" hidden>task definition</dt><dd class="task-row" id="api-task" hidden>…</dd>
+    </dl>
+    <div class="muted seen-title">Responses per API <span class="instance-word">instance</span> since page load
+       <button class="ghost small" id="clear-btn" type="button">clear</button></div>
+    <div id="seen"></div>
+  </section>
+
+  <section class="card wide" id="card-nodes">
+    <h2>3 · <span id="nodes-title">Nodes</span></h2>
+    <p class="hint" id="nodes-hint"></p>
+    <div id="nodes"></div>
+  </section>
+
+  <section class="card" id="card-storage">
+    <h2>4 · Where do my votes live? <span class="muted" id="storage-sub"></span></h2>
+    <p class="hint" id="storage-hint">Waiting for the API…</p>
+    <dl>
+      <dt>store</dt><dd id="store-kind">…</dd>
+      <dt>db host</dt><dd id="store-host">…</dd>
+      <dt>answered by</dt><dd id="store-server">…</dd>
+      <dt>store status</dt><dd id="store-status"><span class="dot"></span><span id="store-status-text">…</span></dd>
+    </dl>
+  </section>
+
+  <!-- Kubernetes only: hidden on ECS and Docker, where there is no ServiceAccount. -->
+  <section class="card" id="card-rbac" hidden>
+    <h2>5 · What can the API see? <span class="muted">(RBAC)</span></h2>
+    <p class="hint">The API asks Kubernetes to list pods, using its OWN ServiceAccount identity — not yours.</p>
+    <div>identity: <code id="rbac-identity">…</code></div>
+    <div id="rbac-badge" class="rbac-badge">…</div>
+    <div id="rbac-body"></div>
+  </section>
+
+  <section class="card" id="card-build">
+    <h2>6 · What's running? <span class="muted">(build provenance)</span>
+      <span id="mixed" class="chip chip-warn" hidden>mixed release</span></h2>
+    <p class="hint">Stamped into each image by the pipeline that built it. A different commit on each tier = a mixed release.</p>
+    <table class="build-table">
+      <thead><tr><th></th><th>version</th><th>commit</th><th>build</th><th>CI</th><th>built</th></tr></thead>
+      <tbody>
+        <tr id="build-fe"><th>frontend</th><td class="mono">…</td><td class="mono">…</td><td>…</td><td>…</td><td>…</td></tr>
+        <tr id="build-api"><th>api</th><td class="mono">…</td><td class="mono">…</td><td>…</td><td>…</td><td>…</td></tr>
+      </tbody>
+    </table>
+    <p class="muted small-print" id="build-ref"></p>
+  </section>
+
+  <!-- Shown only when the pipeline passed a security summary to the API (RELEASE_SECURITY_SUMMARY). -->
+  <section class="card" id="card-security" hidden>
+    <h2>7 · Release security <span class="muted">(what the pipeline found)</span></h2>
+    <p class="hint" id="security-hint"></p>
+    <div id="security-badge" class="rbac-badge">…</div>
+    <div id="security-body"></div>
+  </section>
+</main>
+</body>
+</html>
