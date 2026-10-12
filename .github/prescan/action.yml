@@ -1,10 +1,26 @@
 name: Security Scanning Pre-Checks
-description: This action runs security scanning pre-checks on the codebase.
+description: >
+  Runs Gitleaks and TruffleHog on the git history and Trivy on the filesystem (dependencies,
+  secrets, misconfigurations), uploads the JSON reports and, if asked, fails on blocking findings.
 
 inputs:
   scan-path:
     description: 'Choose a specific path to scan. Defaults to the root of the repository.'
     required: false
+  fail-on-findings:
+    description: >
+      'true' fails the step when there are blocking findings (any Gitleaks finding, a VERIFIED
+      TruffleHog secret, or a fixable Trivy finding at trivy-severity). Default 'false': report only.
+    required: false
+    default: 'false'
+  trivy-severity:
+    description: 'Trivy severities that count as blocking.'
+    required: false
+    default: 'CRITICAL,HIGH'
+  artifact-name:
+    description: 'Name of the uploaded report artifact (must be unique within a workflow run).'
+    required: false
+    default: 'prescan-reports'
 outputs:
   gitleaks-report:
     description: 'Path to the generated Gitleaks JSON report'
@@ -15,7 +31,9 @@ outputs:
   trivy-report:
     description: 'Path to the generated Trivy JSON report'
     value: trivy-report-prescan.json
-
+  blocking-findings:
+    description: 'Number of blocking findings across all three tools'
+    value: ${{ steps.scan.outputs.blocking-findings }}
 
 runs:
   using: "composite"
@@ -62,40 +80,38 @@ runs:
         "$BIN/trivy" --version
         "$BIN/trufflehog" --version
 
-    - name: Determine Scan Path
+    # All scanning logic lives in scan.sh next to this file, so it can also run on a laptop
+    # (labs/scan-local.sh). Inputs reach the script as environment variables, never pasted into
+    # the shell script itself (that would be a template-injection hole).
+    - name: Run Gitleaks, TruffleHog and Trivy
+      id: scan
       shell: bash
-      run: |
-        # Evaluate fallback and write to GITHUB_ENV
-        TARGET="${{ inputs.scan-path }}"
-        if [ -z "$TARGET" ]; then
-          TARGET="$GITHUB_WORKSPACE"
-        fi
-        echo "SCAN_TARGET=$TARGET" >> $GITHUB_ENV
-        echo "Resolved scan path to: $TARGET"
+      env:
+        SCAN_TARGET: ${{ inputs.scan-path }}
+        TRIVY_SEVERITY: ${{ inputs.trivy-severity }}
+        FAIL_ON_FINDINGS: 'false'   # the gate step below decides, after the reports are uploaded
+        REPORT_DIR: .
+      run: '"$GITHUB_ACTION_PATH/scan.sh"'
 
-    - name: Run Gitleaks Scan
-      shell: bash
-      run: |
-        echo "Running Gitleaks scan on $SCAN_TARGET..."
-        gitleaks git "$SCAN_TARGET" --report-format=json --report-path=gitleaks-report.json
-
-    - name: Run TruffleHog Scan
-      shell: bash
-      run: |
-        echo "Running TruffleHog scan on $SCAN_TARGET..."
-        trufflehog git "file://$SCAN_TARGET" --json > trufflehog-report.json
-    
-    - name: Run Trivy Scan (Vulnerabilities and Misconfigurations)
-      shell: bash
-      run: |
-        echo "Running Trivy scan on $SCAN_TARGET..."
-        trivy fs --format json --output trivy-report-prescan.json "$SCAN_TARGET"
-    
     - name: Upload Scan Reports
+      if: ${{ !cancelled() }}
       uses: actions/upload-artifact@v7
       with:
-        name: security-scan-reports
+        name: ${{ inputs.artifact-name }}
         path: |
           gitleaks-report.json
           trufflehog-report.json
           trivy-report-prescan.json
+        if-no-files-found: warn
+
+    - name: Security gate
+      if: ${{ inputs.fail-on-findings == 'true' }}
+      shell: bash
+      env:
+        BLOCKING: ${{ steps.scan.outputs.blocking-findings }}
+      run: |
+        if [[ "${BLOCKING:-0}" != "0" ]]; then
+          echo "::error::${BLOCKING} blocking security finding(s). See the job summary and the report artifact."
+          exit 1
+        fi
+        echo "No blocking findings."
