@@ -22,20 +22,45 @@ runs:
   steps:
     - name: Install Security Tools
       shell: bash
+      env:
+        GITLEAKS_VERSION: "8.30.1"
+        TRIVY_VERSION: "0.69.3"
+        TRUFFLEHOG_VERSION: "3.95.5"
       run: |
-        echo "Installing Gitleaks..."
-        curl -sSfL https://raw.githubusercontent.com/gitleaks/gitleaks/main/scripts/install.sh | sh -s -- -b /usr/local/bin
+        set -euo pipefail
+        BIN="$HOME/.local/bin"
+        TMP="$(mktemp -d)"
+        mkdir -p "$BIN"
+        echo "$BIN" >> "$GITHUB_PATH"
 
-        echo "Installing Trivy..."
-        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+        # usage: fetch <base-url> <archive-name> <checksums-name> <binary-name>
+        fetch() {
+          local base="$1" archive="$2" sums="$3" binary="$4"
+          curl -sSfL --retry 3 -o "$TMP/$archive" "$base/$archive"
+          curl -sSfL --retry 3 -o "$TMP/$sums"    "$base/$sums"
+          (cd "$TMP" && grep " ${archive}\$" "$sums" | sha256sum -c -)
+          tar -xzf "$TMP/$archive" -C "$BIN" "$binary"
+        }
 
-        echo "Installing TruffleHog..."
-        curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
+        echo "Installing Gitleaks ${GITLEAKS_VERSION}..."
+        fetch "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}" \
+          "gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+          "gitleaks_${GITLEAKS_VERSION}_checksums.txt" gitleaks
+
+        echo "Installing Trivy ${TRIVY_VERSION}..."
+        fetch "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}" \
+          "trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" \
+          "trivy_${TRIVY_VERSION}_checksums.txt" trivy
+
+        echo "Installing TruffleHog ${TRUFFLEHOG_VERSION}..."
+        fetch "https://github.com/trufflesecurity/trufflehog/releases/download/v${TRUFFLEHOG_VERSION}" \
+          "trufflehog_${TRUFFLEHOG_VERSION}_linux_amd64.tar.gz" \
+          "trufflehog_${TRUFFLEHOG_VERSION}_checksums.txt" trufflehog
 
         echo "Verifying installations..."
-        gitleaks version
-        trivy --version
-        trufflehog --version
+        "$BIN/gitleaks" version
+        "$BIN/trivy" --version
+        "$BIN/trufflehog" --version
 
     - name: Determine Scan Path
       shell: bash
