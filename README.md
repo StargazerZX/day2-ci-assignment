@@ -3,8 +3,8 @@
 [![Day 2 CI](https://github.com/StargazerZX/day2-ci-assignment/actions/workflows/ci.yml/badge.svg)](https://github.com/StargazerZX/day2-ci-assignment/actions/workflows/ci.yml)
 
 A CI pipeline with security scanning (Gitleaks, TruffleHog, Trivy) built from **composite actions**,
-around **PodPoll**: a small three-tier voting app that shows which build, instance and environment answered
-you. That makes pipeline changes visible in the browser. Plus [**labs**](labs/) that plant problems for
+around **PodPoll**: a small voting app (an nginx frontend and a Flask API) that shows which build, instance and
+environment answered you. That makes pipeline changes visible in the browser. Plus [**labs**](labs/) that plant problems for
 the scanners to catch.
 
 ## Run PodPoll locally
@@ -12,19 +12,20 @@ the scanners to catch.
 Docker with the Compose plugin is all you need.
 
 ```bash
-local/up.sh dev        # http://localhost:8081  (also: prod :8082, ecs-sim :8083, staging :8084)
+local/up.sh dev        # http://localhost:8081  (also: prod :8082, staging :8083)
 local/down.sh dev
 ```
 
-Card 6 ("What's running?") shows the commit, build and CI system of each tier.
+Card 3 ("What's running?") shows the commit, build and CI system of each tier. Votes are kept in the API's
+memory: restart it and they're gone (there is no database, on purpose).
 
 ## The pipeline (`.github/workflows/ci.yml`)
 
 ```mermaid
 flowchart LR
   prescan["prescan<br/>Gitleaks · TruffleHog · Trivy fs"] --> build
-  test["test<br/>pytest (+Postgres) · node · scripts"] --> build
-  build["build (api / frontend / node-agent)<br/>build → postscan (Trivy image) → push to GHCR"] --> verify["verify<br/>run pushed images, smoke test"]
+  test["test<br/>pytest · node · scripts"] --> build
+  build["build (api / frontend)<br/>build → postscan (Trivy image) → push to GHCR"] --> verify["verify<br/>run pushed images, smoke test"]
   build --> pr["pr-comment (PRs)"]
   prescan & test & build & verify --> report["report<br/>security summary + CI table"]
 ```
@@ -40,7 +41,7 @@ flowchart LR
 
 | Action | Runs | Inputs |
 |---|---|---|
-| [`.github/prescan`](.github/prescan/action.yml) | Gitleaks + TruffleHog on the git history, Trivy on the files (vulnerabilities, secrets, misconfigurations) | `scan-path`, `fail-on-findings` (default `false`), `trivy-severity` (default `CRITICAL,HIGH`), `artifact-name` |
+| [`.github/prescan`](.github/prescan/action.yml) | Gitleaks + TruffleHog on the git history, Trivy on the files (vulnerable dependencies, secrets, Dockerfile misconfigurations) | `scan-path`, `fail-on-findings` (default `false`), `trivy-severity` (default `CRITICAL,HIGH`), `artifact-name` |
 | [`.github/postscan`](.github/postscan/action.yml) | Trivy on a built image | `image-tag` (required), `fail-on-findings`, `trivy-severity`, `artifact-name` |
 
 Both install their tools from the official releases after **verifying checksums**, upload the JSON reports even
@@ -61,9 +62,8 @@ your machine. `fail-on-findings` is opt-in in the actions; this repository's wor
 ```text
 .github/prescan, .github/postscan   composite actions (+ their scan scripts)
 .github/workflows/ci.yml            the pipeline
-api/ frontend/ node-agent/          PodPoll (each with a Dockerfile and tests)
+api/ frontend/                      PodPoll (each with a Dockerfile and tests)
 local/                              Docker Compose stack: local/up.sh <env>
-deploy/k8s/base/                    Kubernetes manifests (Kustomize), scanned by Trivy
 scripts/                            version.sh (build provenance), smoke-test.sh, security-report.py, tests
 labs/                               the security labs
 ```
@@ -71,5 +71,5 @@ labs/                               the security labs
 ## Tests
 
 ```bash
-scripts/test.sh          # API (incl. Postgres in a container), node-agent, scripts, frontend logic
+scripts/test.sh          # API, scripts (security-report.py), frontend logic
 ```

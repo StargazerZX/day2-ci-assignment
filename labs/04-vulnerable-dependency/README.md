@@ -12,7 +12,7 @@ git show --stat
 ## What you should see
 
 ```text
-| Trivy fs (CRITICAL,HIGH) | 1 (vuln 1, misconfig 0, secret 0) | 0 without a fix yet, 17 at lower severity, ... |
+| Trivy fs (CRITICAL,HIGH) | 1 (vuln 1, misconfig 0, secret 0) | 0 without a fix yet, 7 at lower severity, ... |
 
 Blocking findings:
   trivy       HIGH CVE-2024-34069  werkzeug 3.0.1 -> 3.0.3  (api/requirements.txt)
@@ -24,7 +24,7 @@ what is vulnerable, under which conditions, and which version fixes it.
 ## Things to notice
 
 - **Tests passing ≠ safe.** Nothing functional broke; the risk is invisible without a scanner.
-- The gate blocks **fixable** HIGH/CRITICAL findings only. The "17 at lower severity" (MEDIUM/LOW) are
+- The gate blocks **fixable** HIGH/CRITICAL findings only. The "7 at lower severity" (MEDIUM/LOW) are
   reported, not blocking. Ask yourselves whether that threshold is right for your team.
 
 ## Fix it (two legitimate options)

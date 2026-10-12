@@ -19,4 +19,4 @@ index afa89ef..e3c8ba0 100644
 -USER 10001:10001
  EXPOSE 5000
  
- # Liveness only (/healthz never checks Redis/Postgres). python:slim has no curl/wget.
+ # Liveness only (/healthz ignores the chaos switches). python:slim has no curl/wget.

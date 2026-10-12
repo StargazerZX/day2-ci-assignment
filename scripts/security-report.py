@@ -3,7 +3,7 @@
 
 Writes, into --out-dir:
   security-summary.json   compact counts (api/contracts/security-summary.schema.json). Small enough
-                          to hand to the running app as RELEASE_SECURITY_SUMMARY (card 7).
+                          to hand to the running app as RELEASE_SECURITY_SUMMARY (the Release security card).
   security-summary.md     for the GitHub job summary and a sticky PR comment
   security-summary.html   a standalone page for build artifacts / GitHub Releases
 

@@ -1,5 +1,5 @@
 """The frontend's stamp.sh (runs at image build time) and app.py's build_info() must sanitise
-build values IDENTICALLY, or card 6 would flag a "mixed release" that isn't one."""
+build values IDENTICALLY, or the "What's running?" card would flag a "mixed release" that isn't one."""
 import json
 import os
 import pathlib

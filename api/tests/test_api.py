@@ -3,7 +3,6 @@ import json
 import threading
 
 import pytest
-
 from conftest import assert_contract
 
 

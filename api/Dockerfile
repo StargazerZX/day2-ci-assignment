@@ -45,7 +45,7 @@ LABEL org.opencontainers.image.title="podpoll-api" \
 USER 10001:10001
 EXPOSE 5000
 
-# Liveness only (/healthz never checks Redis/Postgres). python:slim has no curl/wget.
+# Liveness only (/healthz ignores the chaos switches). python:slim has no curl/wget.
 # Compose overrides this with /readyz so dependants wait for a working store.
 HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=3 \
   CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/healthz', timeout=2)"]

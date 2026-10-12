@@ -30,7 +30,8 @@ Run the seeded app (`local/up.sh dev`) and ask the endpoint to ping a "host" tha
 curl -s 'http://localhost:8081/api/diag/ping?host=localhost;id' | jq -r .output
 ```
 
-`id` runs inside the API container. Anything else would too: reading files, environment variables
+You'll see `uid=10001 ...`: `id` ran inside the API container (and `ping: not found`: the image doesn't even
+contain `ping`, so the endpoint never worked, but the injection does). Anything else would too: reading files, environment variables
 (credentials!), or calling out to the internet. The container's hardening (non-root user, read-only filesystem,
 no capabilities) limits the damage, but doesn't make it acceptable.
 

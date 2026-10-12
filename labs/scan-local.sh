@@ -19,7 +19,7 @@ case "${1:-}" in
   --image) MODE=postscan; IMAGE="${2:?--image needs an image reference}";;
   --build)
     MODE=postscan
-    COMPONENT="${2:?--build needs api, frontend or node-agent}"
+    COMPONENT="${2:?--build needs api or frontend}"
     [[ -f "$COMPONENT/Dockerfile" ]] || die "no $COMPONENT/Dockerfile"
     IMAGE="podpoll-${COMPONENT}:scan-local"
     echo "Building $IMAGE from $COMPONENT/ ..."

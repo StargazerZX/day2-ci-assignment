@@ -11,8 +11,7 @@ scanners flag it, understand *why*, and fix it properly.
 | [04](04-vulnerable-dependency/) | Werkzeug 3.0.1 pinned "temporarily" | Trivy fs (CVE-2024-34069, HIGH) | upgrade, or accept the risk with an expiry date |
 | [05](05-dockerfile-root/) | Dockerfile runs as root, sloppy `apt-get` | Trivy misconfig (DS-0002, DS-0029) | catch it before building anything |
 | [06](06-old-base-image/) | Outdated base image | **postscan** only (6 × HIGH, OpenSSL/musl) | why images are scanned, not just files |
-| [07](07-privileged-pod/) | Privileged pod on the host network | Trivy misconfig (KSV-0009, -0014, -0017, -0118) | infrastructure-as-code gets reviewed too |
-| [08](08-sql-injection/) | SQL built with an f-string | **none of the three** (ruff S608 / SonarQube) | what these tools *can't* see: SAST |
+| [07](07-command-injection/) | A "debug" endpoint that runs a shell command | **none of the three** (ruff S602 / SonarQube) | what these tools *can't* see: SAST |
 
 All seeds are generated or applied on your machine. **Nothing in this repository is a real or reusable
 secret.** The fake keys are created randomly when you plant a seed.
@@ -28,7 +27,7 @@ Then watch it get caught, either way:
 - **In CI (your own repository):** `git push -u origin lab/04-vulnerable-dependency`, then open a pull request
   into `main`. The run turns red; open the job's **summary** for the table and the blocking findings, and the
   `prescan-reports` / `postscan-*` artifacts for the full JSON reports.
-- **Locally:** `labs/scan-local.sh` (image seeds: `labs/scan-local.sh --build frontend`). It runs the same
+- **Locally:** `labs/scan-local.sh` (seed 06: `labs/scan-local.sh --build frontend`). It runs the same
   script as CI, with the same tool versions, and exits 1 on blocking findings.
 
 Read the seed's README, fix it yourself (on the lab branch), and scan again. Stuck? `labs/fix.sh NN` applies the

@@ -43,7 +43,7 @@ ALL = ["--gitleaks", str(FIX / "gitleaks.json"), "--gitleaks-ignore", str(FIX / 
 def test_full_report_from_real_scanner_output(tmp_path):
     code, s, md, html = run(tmp_path, *ALL)
     assert code == 0                                   # reporting, not gating, by default
-    Draft202012Validator(SCHEMA).validate(s)           # exactly what card 7 / the API contract expects
+    Draft202012Validator(SCHEMA).validate(s)           # exactly what the Release security card / API contract expects
     t = tools_by_name(s)
     assert s["status"] == "fail" and s["gate"] == "CRITICAL,HIGH (fixable)"
 

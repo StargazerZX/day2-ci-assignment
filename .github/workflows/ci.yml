@@ -41,7 +41,7 @@ on:
 
 jobs:
   # Gitleaks + TruffleHog on the whole git history, Trivy on the files (dependencies, secrets,
-  # Dockerfiles, Kubernetes manifests). Fails the run on blocking findings unless switched off.
+  # Dockerfiles). Fails the run on blocking findings unless switched off.
   prescan:
     runs-on: ubuntu-latest
     timeout-minutes: 10
