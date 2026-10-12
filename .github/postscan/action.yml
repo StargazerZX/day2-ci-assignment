@@ -8,7 +8,7 @@ inputs:
 outputs:
   trivy-report:
     description: 'Path to the generated Trivy JSON report'
-    value: trivy-report-postscan-postscan.json
+    value: trivy-report-postscan.json
 
 runs:
   using: "composite"
